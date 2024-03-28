@@ -1,0 +1,4 @@
+# ninja log v5
+1	244	7333396645821039	build.ninja	cdd3ebe9d9ea514d
+3	722	7333383044807121	CMakeFiles/pathfinding_astar.dir/main.cpp.obj	ad8308fe0e457bcb
+723	844	7333383045993601	pathfinding_astar.exe	d532a4cf545fdc6d

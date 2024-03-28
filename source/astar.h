@@ -14,7 +14,7 @@ namespace A_star {
         // Constructors
         Coordinate() = default;
         Coordinate(int x_, int y_) : x(x_), y(y_) {};
-        // Operators: to compare, and to add together
+        // Operators: one to compare, and one to add 2 Coordinates together
         bool operator == (const Coordinate& right_) const {
             return (x == right_.x && y == right_.y);
         }
@@ -29,9 +29,8 @@ namespace A_star {
         // Parent (so we can backtrack through our path when we finished)
         Node* parent;
         Coordinate coords;
-        // g = the current shortest path found from the start to end
+        // g = the current shortest path found from the start to this node
         // h = a heuristic (estimate) of the distance between this node and goal node
-        // f = g + h
         unsigned int g, h;
         // Constructor
         Node(Coordinate coords_, Node* parent_, unsigned int g_, unsigned int h_) : coords(coords_), parent(parent_), g(g_), h(h_) {};
@@ -42,9 +41,9 @@ namespace A_star {
             return ((size_t)coords_.x << 32) | coords_.y;
         }
     };
-    // Special sorting algo for the open set to store Node pointers by H value
-    // I'm using the H value instead of the F value because
-    // I don't see a point why to do so when so many nodes share the F value.
+    // Special sorting algo for the open set to store Node pointers sorted by H value
+    // I'm using the H value instead of the F value that is stated in the pseudocode because
+    // I don't see a point why to do so when so many nodes share the F value
     struct sortbyHValue {
         bool operator() (const Node* left_, const Node* right_) const {
             return left_->h < right_->h;
@@ -59,17 +58,17 @@ namespace A_star {
     // Admissible heuristics (ones that don't overestimate the cost of travelling from current node to goal node)
     class Heuristic {
     public:
-        // Manhattan heuristic for grids that only allow 4 directions of movement
+        // Manhattan heuristic for grids that allow 4 directions of movement
         static unsigned int manhattan(const Coordinate& start_, const Coordinate& goal_) {
             unsigned int dx = abs(start_.x - goal_.x), dy = abs(start_.y - goal_.y);
             return 10 * (dx + dy);
         }
-        // Diagonal heuristic for grids that only allow 8 directions of movement
+        // Diagonal heuristic for grids that allow 8 directions of movement
         static unsigned int diagonal(const Coordinate& start_, const Coordinate& goal_) {
             unsigned int dx = abs(start_.x - goal_.x), dy = abs(start_.y - goal_.y);
             return 10 * (dx + dy) - (6 * std::min(dx, dy));
         }
-        // Euclidean heuristic that allows for more than 8 directions
+        // Euclidean heuristic for grids that allow more than 8 directions of movement
         static unsigned int euclidean(const Coordinate& start_, const Coordinate& goal_) {
             unsigned int dx = abs(start_.x - goal_.x), dy = abs(start_.y - goal_.y);
             // Getting the answer with square root approximation (7 iterations are enough, it seems)
@@ -107,7 +106,7 @@ namespace A_star {
     private:
         // Reconstruct
         // We iterate through the parents of the nodes from the final node, since that is the shortest path
-        // We add them to a vector of Coordinate, and that will be our final result.
+        // We add their coordinates to a vector of type Coordinate, and that will be our final result.
         static std::vector<Coordinate> reconstruct(Node* current) {
             std::vector<Coordinate> result;
             result.push_back(current->coords);
@@ -117,16 +116,13 @@ namespace A_star {
             }
             return result;
         }
-        // We iterate through the open map to find the Node pointer that has the minimum H value in the map
-        // Every pseudocode of A-star ever says that you must search for the lowest F, but I don't see the point in doing that,
-        // since a lot of other nodes have the same F values, so I'm doing this instead.
     public:
         // findPath, the main algo
         // Returns
         //      -> an empty vector if no path exists from start node to goal node
-        //      -> every coordinate on the path, including the start node and the goal node
+        //      -> every coordinate on the shortest path, including the start node and the goal node
         static std::vector<Coordinate> findPath(const Coordinate& start_, const Coordinate& goal_, const bool& diagonal_, const Map& map) {
-            // If start node or goal node is invalid, return an empty vector
+            // If start node or goal node is invalid, or the size of the map is invalid -> return an empty vector
             if (!map.isValid(start_) || !map.isValid(start_) || map.mapSize_x <= 0  || map.mapSize_y <= 0) return {};
             // Closed map
             nodeMap closed;
@@ -135,6 +131,7 @@ namespace A_star {
             // A Coordinate map for storing iterators for the open set (for access with the Coordinate type)
             nodeSetMap itrMap;
             // Put the starting node in the open set and the Coordinate map
+            // This "diagonal" boolean is a terrible way to implement directions, but I'm too lazy to fix it ¯\_(ツ)_/¯
             itrMap[start_] = open.insert(new Node(start_, nullptr, 0, diagonal_ ? Heuristic::diagonal(start_, goal_) : Heuristic::manhattan(start_, goal_))).first;
             // Prepping a bunch of stuff
             Node* current;
@@ -153,7 +150,7 @@ namespace A_star {
                 open.erase(open.begin());
                 // For all neighbors of this Node
                 for (short i = 0; i < directions; i++) {
-                    // Get Coordinate
+                    // Get Coordinate of this neighbor
                     next = current->coords + dir[i];
                     // If Coordinate is invalid (is a wall or out of boundaries), or is already evaluated (in the closed map), skip this neighbor
                     if (!map.isValid(next) || closed.find(next) != closed.end()) {

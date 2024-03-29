@@ -31,9 +31,9 @@ namespace A_star {
         Coordinate coords;
         // g = the current shortest path found from the start to this node
         // h = a heuristic (estimate) of the distance between this node and goal node
-        unsigned int g, h;
+        unsigned int g, h, f;
         // Constructor
-        Node(Coordinate coords_, Node* parent_, unsigned int g_, unsigned int h_) : coords(coords_), parent(parent_), g(g_), h(h_) {};
+        Node(Coordinate coords_, Node* parent_, unsigned int g_, unsigned int h_) : coords(coords_), parent(parent_), g(g_), h(h_), f(g_ + h_) {};
     };
     // Special hashing algo for unordered_map to store values with a Coordinate key
     struct coord_hash {
@@ -41,18 +41,16 @@ namespace A_star {
             return ((size_t)coords_.x << 32) | coords_.y;
         }
     };
-    // Special sorting algo for the open set to store Node pointers sorted by H value
-    // I'm using the H value instead of the F value that is stated in the pseudocode because
-    // I don't see a point why to do so when so many nodes share the F value
-    struct sortbyHValue {
+    // Special sorting algo for the open set to store Node pointers sorted by the most recent F value
+    struct sortbyFValue {
         bool operator() (const Node* left_, const Node* right_) const {
-            return left_->h < right_->h;
+            return left_->f <= right_->f;
         }
     };
     // Type definition for unordered_map (for the "closed" map and the "walls" map)
     typedef std::unordered_map<Coordinate, Node*, coord_hash> nodeMap;
     // Type definition for set (for the open set)
-    typedef std::set<Node*, sortbyHValue> nodeSet;
+    typedef std::set<Node*, sortbyFValue> nodeSet;
     // Type definition for unordered_map (for the "open set iterator" map)
     typedef std::unordered_map<Coordinate, nodeSet::iterator, coord_hash> nodeSetMap;
     // Admissible heuristics (ones that don't overestimate the cost of travelling from current node to goal node)
@@ -165,6 +163,7 @@ namespace A_star {
                     // Else if it has a lower G value than what is stored, update its G cost and parent
                     else if (tentative < (*itrMap[next])->g) {
                         (*itrMap[next])->g = tentative;
+                        (*itrMap[next])->f = tentative + (*itrMap[next])->h;
                         (*itrMap[next])->parent = current;
                     }
                 }
